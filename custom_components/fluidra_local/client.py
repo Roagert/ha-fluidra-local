@@ -54,14 +54,14 @@ class FluidraLocalClient:
     async def component(self, component_id: int) -> dict[str, Any]:
         return await self.request("GET", f"/component/{component_id}")
 
-    async def power(self, on: bool, *, wait: bool = True) -> dict[str, Any]:
+    async def power(self, on: bool, *, wait: bool = False) -> dict[str, Any]:
         suffix = "?wait=1&timeout=180&interval=10" if wait else ""
         return await self.request("PUT", f"/power{suffix}", {"on": on}, timeout=220 if wait else None)
 
-    async def set_temperature(self, celsius: float, *, wait: bool = True) -> dict[str, Any]:
+    async def set_temperature(self, celsius: float, *, wait: bool = False) -> dict[str, Any]:
         suffix = "?wait=1&timeout=180&interval=10" if wait else ""
         return await self.request("PUT", f"/temperature{suffix}", {"celsius": celsius}, timeout=220 if wait else None)
 
-    async def set_mode(self, mode: str, *, wait: bool = True) -> dict[str, Any]:
+    async def set_mode(self, mode: str, *, wait: bool = False) -> dict[str, Any]:
         suffix = "?wait=1&timeout=180&interval=10" if wait else ""
         return await self.request("PUT", f"/mode{suffix}", {"mode": mode}, timeout=220 if wait else None)
