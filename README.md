@@ -10,6 +10,16 @@ http://100.97.152.33:8765
 
 The bridge server handles Fluidra protocol/auth details outside Home Assistant.
 
+## Optional bridge authentication
+
+Version `0.3.0` adds optional bearer-token support for the local bridge.
+
+1. Start the bridge with an auth token, either through `FLUIDRA_LOCAL_AUTH_TOKEN` or `serve --auth-token`.
+2. In Home Assistant, open **Settings → Devices & services → Fluidra Local Server → Configure**.
+3. Enter the same token in `auth_token`.
+
+When configured, Home Assistant sends `Authorization: Bearer <token>` to the bridge. Leave `auth_token` blank for an unauthenticated bridge.
+
 ## Features
 
 - Climate entity for the pool heat pump

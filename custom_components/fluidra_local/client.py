@@ -14,8 +14,9 @@ class FluidraLocalClientError(Exception):
 class FluidraLocalClient:
     """Small async wrapper around the deterministic local server HTTP API."""
 
-    def __init__(self, base_url: str, *, timeout: float = 30.0) -> None:
+    def __init__(self, base_url: str, *, auth_token: str | None = None, timeout: float = 30.0) -> None:
         self.base_url = base_url.rstrip("/")
+        self.auth_token = (auth_token or "").strip()
         self.timeout = timeout
 
     async def request(self, method: str, path: str, payload: dict[str, Any] | None = None, *, timeout: float | None = None) -> Any:
@@ -23,11 +24,14 @@ class FluidraLocalClient:
 
     def _request_sync(self, method: str, path: str, payload: dict[str, Any] | None, timeout: float) -> Any:
         data = None if payload is None else json.dumps(payload).encode()
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        if self.auth_token:
+            headers["Authorization"] = f"Bearer {self.auth_token}"
         req = request.Request(
             self.base_url + path,
             data=data,
             method=method,
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            headers=headers,
         )
         try:
             with request.urlopen(req, timeout=timeout) as resp:
