@@ -57,11 +57,11 @@ class FluidraLocalOptionsFlow(config_entries.OptionsFlow):
     """Handle options for Fluidra Local Server."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         errors: dict[str, str] = {}
-        base_url = self.config_entry.data[CONF_BASE_URL]
+        base_url = self._config_entry.data[CONF_BASE_URL]
 
         if user_input is not None:
             auth_token = user_input.get(CONF_AUTH_TOKEN, DEFAULT_AUTH_TOKEN).strip()
@@ -80,7 +80,7 @@ class FluidraLocalOptionsFlow(config_entries.OptionsFlow):
                 return self.async_create_entry(title="", data=options)
 
         schema = vol.Schema({
-            vol.Optional(CONF_AUTH_TOKEN, default=self.config_entry.options.get(CONF_AUTH_TOKEN, self.config_entry.data.get(CONF_AUTH_TOKEN, DEFAULT_AUTH_TOKEN))): str,
-            vol.Optional(CONF_SCAN_INTERVAL, default=self.config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)),
+            vol.Optional(CONF_AUTH_TOKEN, default=self._config_entry.options.get(CONF_AUTH_TOKEN, self._config_entry.data.get(CONF_AUTH_TOKEN, DEFAULT_AUTH_TOKEN))): str,
+            vol.Optional(CONF_SCAN_INTERVAL, default=self._config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)),
         })
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
