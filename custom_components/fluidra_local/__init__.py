@@ -13,7 +13,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Fluidra Local Server from a config entry."""
     auth_token = entry.options.get(CONF_AUTH_TOKEN) or entry.data.get(CONF_AUTH_TOKEN)
     client = FluidraLocalClient(entry.data[CONF_BASE_URL], auth_token=auth_token)
-    coordinator = FluidraLocalCoordinator(hass, client, entry.options)
+    coordinator = FluidraLocalCoordinator(hass, client, {**entry.data, **entry.options})
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {"client": client, "coordinator": coordinator}
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

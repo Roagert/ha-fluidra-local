@@ -10,6 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
+from .state_values import component_value
 
 
 async def async_setup_entry(
@@ -37,7 +38,7 @@ class FluidraLocalPowerSwitch(CoordinatorEntity, SwitchEntity):
 
     @property
     def is_on(self) -> bool | None:
-        value = self.coordinator.data.get("power", {}).get("reportedValue")
+        value = component_value(self.coordinator.data.get("power"), prefer_desired=True)
         return None if value is None else bool(value)
 
     @property

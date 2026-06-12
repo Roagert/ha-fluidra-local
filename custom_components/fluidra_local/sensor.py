@@ -11,6 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
+from .state_values import component_value
 
 SENSORS = [
     ("pool_temperature", "Pool Temperature", SensorDeviceClass.TEMPERATURE, UnitOfTemperature.CELSIUS, 10),
@@ -38,7 +39,7 @@ class FluidraLocalSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        value = self.coordinator.data.get(self.key, {}).get("reportedValue")
+        value = component_value(self.coordinator.data.get(self.key), prefer_desired=self.key in {"target_temperature"})
         return None if value is None else value / self.scale
 
     @property

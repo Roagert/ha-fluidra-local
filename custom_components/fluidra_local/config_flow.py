@@ -4,6 +4,7 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .client import FluidraLocalClient, FluidraLocalClientError
@@ -29,20 +30,24 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except FluidraLocalClientError:
                 errors["base"] = "cannot_connect"
             else:
+                scan_interval = int(user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+                scan_interval = max(MIN_SCAN_INTERVAL, min(MAX_SCAN_INTERVAL, scan_interval))
                 data = {CONF_BASE_URL: base_url}
                 if auth_token:
                     data[CONF_AUTH_TOKEN] = auth_token
-                return self.async_create_entry(title="Fluidra Local Heat Pump", data=data)
+                return self.async_create_entry(title="Fluidra Local Heat Pump", data=data, options={CONF_SCAN_INTERVAL: scan_interval})
 
         schema = vol.Schema(
             {
                 vol.Required(CONF_BASE_URL, default=DEFAULT_BASE_URL): str,
                 vol.Optional(CONF_AUTH_TOKEN, default=DEFAULT_AUTH_TOKEN): str,
+                vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)),
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
     @staticmethod
+    @callback
     def async_get_options_flow(config_entry):
         """Create the options flow."""
         return FluidraLocalOptionsFlow(config_entry)

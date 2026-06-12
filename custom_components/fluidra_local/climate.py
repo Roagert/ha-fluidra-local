@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, VALUE_TO_MODE, MODE_TO_VALUE
+from .state_values import component_value
 
 PRESET_TO_HVAC = {
     "Smart Auto": HVACMode.AUTO,
@@ -29,10 +30,8 @@ HVAC_TO_PRESET = {
 }
 
 
-def _scaled(component: dict[str, Any] | None, scale: float = 10.0) -> float | None:
-    if not isinstance(component, dict):
-        return None
-    value = component.get("reportedValue")
+def _scaled(component: dict[str, Any] | None, scale: float = 10.0, *, prefer_desired: bool = False) -> float | None:
+    value = component_value(component, prefer_desired=prefer_desired)
     return None if value is None else value / scale
 
 
@@ -72,7 +71,7 @@ class FluidraLocalClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_mode(self) -> HVACMode:
-        if self.coordinator.data.get("power", {}).get("reportedValue") == 0:
+        if component_value(self.coordinator.data.get("power"), prefer_desired=True) == 0:
             return HVACMode.OFF
         return PRESET_TO_HVAC.get(self.preset_mode, HVACMode.HEAT)
 
@@ -82,11 +81,11 @@ class FluidraLocalClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def preset_mode(self) -> str | None:
-        return VALUE_TO_MODE.get(self.coordinator.data.get("mode", {}).get("reportedValue"))
+        return VALUE_TO_MODE.get(component_value(self.coordinator.data.get("mode"), prefer_desired=True))
 
     @property
     def target_temperature(self) -> float | None:
-        return _scaled(self.coordinator.data.get("target_temperature"), 10.0)
+        return _scaled(self.coordinator.data.get("target_temperature"), 10.0, prefer_desired=True)
 
     @property
     def current_temperature(self) -> float | None:
