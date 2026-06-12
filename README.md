@@ -13,13 +13,14 @@ The bridge server handles Fluidra protocol/auth details outside Home Assistant.
 ## Features
 
 - Climate entity for the pool heat pump
-- Power on/off
+- Climate power on/off
+- Dedicated Power switch entity
 - Target temperature
 - Preset/mode selection
 - Pool temperature sensor
 - Air temperature sensor
 - Target/min/max setpoint sensors
-- No-flow problem binary sensor
+- No Flow Error problem binary sensor (`off` = OK, `on` = error)
 
 ## Preset modes
 
@@ -73,3 +74,30 @@ The companion bridge implementation lives in the reverse-engineering/project rep
 ## Security note
 
 Do not put Fluidra tokens or credentials into Home Assistant. Keep them on the local bridge host. This integration stores only the local bridge URL.
+
+
+## Entities
+
+The integration creates:
+
+```text
+climate.fluidra_local_heat_pump_pool_heat_pump
+switch.fluidra_local_heat_pump_power
+sensor.fluidra_local_heat_pump_pool_temperature
+sensor.fluidra_local_heat_pump_air_temperature
+sensor.fluidra_local_heat_pump_target_temperature
+sensor.fluidra_local_heat_pump_minimum_setpoint
+sensor.fluidra_local_heat_pump_maximum_setpoint
+binary_sensor.fluidra_local_heat_pump_no_flow_error
+```
+
+`binary_sensor.fluidra_local_heat_pump_no_flow_error` uses Home Assistant's `problem` device class:
+
+- `off` means normal / no flow error is not active.
+- `on` means the heat pump reports a no-flow error.
+
+## Brand assets
+
+The HACS brand assets are included in `brand/` and `custom_components/fluidra_local/brand/`.
+They are derived from the public-domain text logo hosted on Wikimedia Commons as `Fluidra_logo.svg`.
+Fluidra is a trademark of Fluidra; the logo is used here only to identify the supported integration/device ecosystem.

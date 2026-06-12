@@ -5,7 +5,7 @@ CONF_DEVICE_ID = "device_id"
 DEFAULT_NAME = "Fluidra Local Heat Pump"
 DEFAULT_BASE_URL = "http://127.0.0.1:8765"
 DEFAULT_DEVICE_ID = "LG24440781"
-PLATFORMS = ["climate", "sensor", "binary_sensor"]
+PLATFORMS = ["climate", "sensor", "binary_sensor", "switch"]
 
 MODE_TO_VALUE = {
     "Smart Heating": 0,
