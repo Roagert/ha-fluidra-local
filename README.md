@@ -111,3 +111,17 @@ binary_sensor.fluidra_local_heat_pump_no_flow_error
 The HACS brand assets are included in `brand/` and `custom_components/fluidra_local/brand/`.
 They are derived from the public-domain text logo hosted on Wikimedia Commons as `Fluidra_logo.svg`.
 Fluidra is a trademark of Fluidra; the logo is used here only to identify the supported integration/device ecosystem.
+
+## Polling and Home Assistant history
+
+This integration is a `local_polling` integration. Home Assistant polls the local Fluidra bridge on a fixed interval and stores normal entity history through Home Assistant's Recorder/history system.
+
+Default behavior:
+
+- Poll interval: **30 seconds**.
+- Configurable in the integration options as `scan_interval`.
+- Safe range: **10 to 300 seconds**.
+- If a temperature, power, flow, or mode value changes at the bridge/backend, the next poll updates the HA entity state.
+- If the value has not changed, the HA entity keeps the same value; HA does not create fake state changes just because a poll happened.
+
+The bridge remains the source of truth for the current Fluidra state. The HA coordinator refreshes from the bridge periodically and after HA-originated write commands.

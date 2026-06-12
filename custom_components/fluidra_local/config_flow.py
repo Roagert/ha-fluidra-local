@@ -7,7 +7,7 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 
 from .client import FluidraLocalClient, FluidraLocalClientError
-from .const import CONF_AUTH_TOKEN, CONF_BASE_URL, DEFAULT_AUTH_TOKEN, DEFAULT_BASE_URL, DOMAIN
+from .const import CONF_AUTH_TOKEN, CONF_BASE_URL, CONF_SCAN_INTERVAL, DEFAULT_AUTH_TOKEN, DEFAULT_BASE_URL, DEFAULT_SCAN_INTERVAL, DOMAIN, MAX_SCAN_INTERVAL, MIN_SCAN_INTERVAL
 
 
 class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -67,10 +67,15 @@ class FluidraLocalOptionsFlow(config_entries.OptionsFlow):
             except FluidraLocalClientError:
                 errors["base"] = "cannot_connect"
             else:
-                options = {}
+                scan_interval = int(user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+                scan_interval = max(MIN_SCAN_INTERVAL, min(MAX_SCAN_INTERVAL, scan_interval))
+                options = {CONF_SCAN_INTERVAL: scan_interval}
                 if auth_token:
                     options[CONF_AUTH_TOKEN] = auth_token
                 return self.async_create_entry(title="", data=options)
 
-        schema = vol.Schema({vol.Optional(CONF_AUTH_TOKEN, default=DEFAULT_AUTH_TOKEN): str})
+        schema = vol.Schema({
+            vol.Optional(CONF_AUTH_TOKEN, default=self.config_entry.options.get(CONF_AUTH_TOKEN, self.config_entry.data.get(CONF_AUTH_TOKEN, DEFAULT_AUTH_TOKEN))): str,
+            vol.Optional(CONF_SCAN_INTERVAL, default=self.config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)),
+        })
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

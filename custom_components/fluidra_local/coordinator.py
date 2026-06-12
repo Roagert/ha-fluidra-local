@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .client import FluidraLocalClient
-from .const import DOMAIN
+from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, MAX_SCAN_INTERVAL, MIN_SCAN_INTERVAL, CONF_SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,11 +25,22 @@ READ_COMPONENTS = {
 }
 
 
+def poll_interval_from_options(options: dict[str, Any] | None) -> timedelta:
+    """Return a safe polling interval for Fluidra state refreshes."""
+    raw_value = (options or {}).get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    try:
+        seconds = int(raw_value)
+    except (TypeError, ValueError):
+        seconds = DEFAULT_SCAN_INTERVAL
+    seconds = max(MIN_SCAN_INTERVAL, min(MAX_SCAN_INTERVAL, seconds))
+    return timedelta(seconds=seconds)
+
+
 class FluidraLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Fetch power/mode/temperature from the local Fluidra server."""
 
-    def __init__(self, hass: HomeAssistant, client: FluidraLocalClient) -> None:
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=30))
+    def __init__(self, hass: HomeAssistant, client: FluidraLocalClient, options: dict[str, Any] | None = None) -> None:
+        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=poll_interval_from_options(options))
         self.client = client
 
     async def _async_update_data(self) -> dict[str, Any]:
