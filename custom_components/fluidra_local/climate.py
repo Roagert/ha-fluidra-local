@@ -94,20 +94,20 @@ class FluidraLocalClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         if hvac_mode == HVACMode.OFF:
-            await self.client.power(False, wait=True)
+            await self.client.power(False, wait=False)
         else:
-            await self.client.power(True, wait=True)
+            await self.client.power(True, wait=False)
             preset = HVAC_TO_PRESET.get(hvac_mode)
             if preset:
-                await self.client.set_mode(preset, wait=True)
+                await self.client.set_mode(preset, wait=False)
         await self.coordinator.async_request_refresh()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        await self.client.set_mode(preset_mode, wait=True)
+        await self.client.set_mode(preset_mode, wait=False)
         await self.coordinator.async_request_refresh()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         if ATTR_TEMPERATURE not in kwargs:
             return
-        await self.client.set_temperature(float(kwargs[ATTR_TEMPERATURE]), wait=True)
+        await self.client.set_temperature(float(kwargs[ATTR_TEMPERATURE]), wait=False)
         await self.coordinator.async_request_refresh()

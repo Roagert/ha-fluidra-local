@@ -58,9 +58,9 @@ class FluidraLocalPowerSwitch(CoordinatorEntity, SwitchEntity):
         }
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self.client.power(True, wait=True)
+        await self.client.power(True, wait=False)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self.client.power(False, wait=True)
+        await self.client.power(False, wait=False)
         await self.coordinator.async_request_refresh()

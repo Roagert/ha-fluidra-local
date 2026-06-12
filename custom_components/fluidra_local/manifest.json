@@ -8,6 +8,6 @@
   "documentation": "https://github.com/Roagert/ha-fluidra-local",
   "iot_class": "local_polling",
   "requirements": [],
-  "version": "0.3.2",
+  "version": "0.3.3",
   "issue_tracker": "https://github.com/Roagert/ha-fluidra-local/issues"
 }
