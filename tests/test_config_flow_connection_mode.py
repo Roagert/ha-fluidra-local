@@ -33,3 +33,33 @@ def test_manifest_uses_fluidra_logo_assets_and_cloud_requirement():
     assert '"logo": "logo.png"' in text
     assert '"icon": "icon.svg"' in text
     assert "boto3" in text
+
+
+def test_cloud_form_does_not_prompt_for_device_id():
+    text = CONFIG_FLOW.read_text()
+    cloud_step = text.split("async def async_step_cloud", 1)[1].split("@staticmethod", 1)[0]
+    assert "vol.Required(CONF_USERNAME)" in cloud_step
+    assert "vol.Required(CONF_PASSWORD)" in cloud_step
+    assert "vol.Optional(CONF_DEVICE_ID" not in cloud_step
+
+
+def test_cloud_flow_stores_device_id_discovered_after_login():
+    text = CONFIG_FLOW.read_text()
+    cloud_step = text.split("async def async_step_cloud", 1)[1].split("@staticmethod", 1)[0]
+    assert "devices = await client.devices()" in cloud_step
+    assert "data[CONF_DEVICE_ID] = device_id" in cloud_step
+
+
+def test_cloud_flow_prompts_for_device_when_login_finds_multiple_devices():
+    text = CONFIG_FLOW.read_text()
+    assert "async_step_cloud_device" in text
+    assert "self._cloud_devices" in text
+    assert "len(devices) > 1" in text
+    assert "vol.Required(CONF_DEVICE_ID): vol.In" in text
+
+
+def test_cloud_client_never_falls_back_to_default_device_id_for_discovery():
+    text = (ROOT / "custom_components" / "fluidra_local" / "cloud_client.py").read_text()
+    ensure_device = text.split("async def _ensure_device_id", 1)[1].split("async def state", 1)[0]
+    assert "DEFAULT_DEVICE_ID" not in ensure_device
+    assert "raise FluidraCloudClientError" in ensure_device

@@ -7,7 +7,7 @@ from typing import Any
 
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.data_entry_flow import AbortFlow, FlowResult
 
 from .client import FluidraLocalClient, FluidraLocalClientError
 from .cloud_client import FluidraCloudClient, FluidraCloudClientError
@@ -41,6 +41,10 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_base_url: str | None = None
         self._discovered_device_id: str | None = None
         self._discovered_auth_required = False
+        self._cloud_username: str | None = None
+        self._cloud_password: str | None = None
+        self._cloud_scan_interval = DEFAULT_SCAN_INTERVAL
+        self._cloud_devices: list[dict[str, Any]] = []
 
     async def async_step_zeroconf(self, discovery_info: Any) -> FlowResult:
         """Handle mDNS discovery from the local Fluidra bridge."""
@@ -49,10 +53,22 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_base_url = base_url
         self._discovered_device_id = str(properties.get(CONF_DEVICE_ID) or properties.get("device_id") or DEFAULT_DEVICE_ID)
         self._discovered_auth_required = str(properties.get("auth_required", "0")).lower() in {"1", "true", "yes"}
+        self._abort_if_matching_local_entry_configured(base_url, self._discovered_device_id)
         await self.async_set_unique_id(f"{MODE_LOCAL}:{base_url}")
         self._abort_if_unique_id_configured()
         self.context["title_placeholders"] = {"name": "Fluidra Local Bridge"}
         return await self.async_step_local()
+
+    def _abort_if_matching_local_entry_configured(self, base_url: str, device_id: str | None = None) -> None:
+        """Abort discovery if this local bridge URL or device is already configured."""
+        normalized_base_url = base_url.rstrip("/")
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            if entry.data.get(CONF_CONNECTION_MODE, MODE_LOCAL) != MODE_LOCAL:
+                continue
+            configured_base_url = str(entry.data.get(CONF_BASE_URL, "")).rstrip("/")
+            configured_device_id = entry.data.get(CONF_DEVICE_ID)
+            if configured_base_url == normalized_base_url or (device_id and configured_device_id == device_id):
+                raise AbortFlow("already_configured")
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Choose local bridge or direct cloud mode."""
@@ -110,20 +126,27 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             username = user_input[CONF_USERNAME].strip()
             password = user_input[CONF_PASSWORD]
-            device_id = user_input.get(CONF_DEVICE_ID, "").strip()
-            await self.async_set_unique_id(f"{MODE_CLOUD}:{username}:{device_id or DEFAULT_DEVICE_ID}")
-            self._abort_if_unique_id_configured()
-            client = FluidraCloudClient(username, password, device_id=device_id or None)
+            client = FluidraCloudClient(username, password)
             try:
-                await client.components()
+                devices = await client.devices()
             except FluidraCloudClientError as exc:
                 errors["base"] = "invalid_auth" if "invalid_auth" in str(exc) else "cannot_connect"
             else:
                 scan_interval = int(user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
                 scan_interval = max(MIN_SCAN_INTERVAL, min(MAX_SCAN_INTERVAL, scan_interval))
+                if len(devices) > 1:
+                    self._cloud_username = username
+                    self._cloud_password = password
+                    self._cloud_scan_interval = scan_interval
+                    self._cloud_devices = devices
+                    return await self.async_step_cloud_device()
+                device_id = devices[0]["id"]
+                client.device_id = device_id
+                await client.components()
+                await self.async_set_unique_id(f"{MODE_CLOUD}:{username}:{device_id}")
+                self._abort_if_unique_id_configured()
                 data = {CONF_CONNECTION_MODE: MODE_CLOUD, CONF_USERNAME: username, CONF_PASSWORD: password}
-                if device_id:
-                    data[CONF_DEVICE_ID] = device_id
+                data[CONF_DEVICE_ID] = device_id
                 return self.async_create_entry(title="Fluidra Cloud Heat Pump", data=data, options={CONF_SCAN_INTERVAL: scan_interval})
 
         return self.async_show_form(
@@ -131,10 +154,31 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required(CONF_USERNAME): str,
                 vol.Required(CONF_PASSWORD): str,
-                vol.Optional(CONF_DEVICE_ID, default=""): str,
                 vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)),
             }),
             errors=errors,
+        )
+
+    async def async_step_cloud_device(self, user_input: dict | None = None) -> FlowResult:
+        """Choose a Fluidra cloud device after login when an account has multiple devices."""
+        if user_input is not None:
+            device_id = user_input[CONF_DEVICE_ID]
+            username = self._cloud_username or ""
+            password = self._cloud_password or ""
+            await self.async_set_unique_id(f"{MODE_CLOUD}:{username}:{device_id}")
+            self._abort_if_unique_id_configured()
+            data = {CONF_CONNECTION_MODE: MODE_CLOUD, CONF_USERNAME: username, CONF_PASSWORD: password}
+            data[CONF_DEVICE_ID] = device_id
+            return self.async_create_entry(title="Fluidra Cloud Heat Pump", data=data, options={CONF_SCAN_INTERVAL: self._cloud_scan_interval})
+
+        device_options = {
+            str(device["id"]): str(device.get("name") or device.get("serialNumber") or device.get("id"))
+            for device in self._cloud_devices
+        }
+        return self.async_show_form(
+            step_id="cloud_device",
+            data_schema=vol.Schema({vol.Required(CONF_DEVICE_ID): vol.In(device_options)}),
+            errors={},
         )
 
     @staticmethod

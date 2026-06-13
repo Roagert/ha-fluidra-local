@@ -10,7 +10,7 @@ from urllib import error, request
 import boto3
 from botocore.exceptions import ClientError
 
-from .const import DEFAULT_DEVICE_ID, MODE_TO_VALUE
+from .const import MODE_TO_VALUE
 
 COGNITO_REGION = "eu-west-1"
 COGNITO_CLIENT_ID = "4s2pr20gcl9fac5okd84q0e1h1"
@@ -81,13 +81,30 @@ class FluidraCloudClient:
         except Exception as exc:
             raise FluidraCloudClientError(str(exc)) from exc
 
+    async def devices(self) -> list[dict[str, Any]]:
+        """Return Fluidra cloud devices with valid ids."""
+        devices = await self.request("GET", "/generic/devices")
+        items = devices if isinstance(devices, list) else (devices.get("data") or devices.get("devices") or [] if isinstance(devices, dict) else [])
+        if not isinstance(items, list):
+            raise FluidraCloudClientError("invalid_devices_response")
+        valid_devices: list[dict[str, Any]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            device_id = item.get("id") or item.get("deviceId")
+            if not device_id:
+                continue
+            valid_devices.append({**item, "id": str(device_id)})
+        if not valid_devices:
+            raise FluidraCloudClientError("no_device")
+        return valid_devices
+
     async def _ensure_device_id(self) -> str:
         if self.device_id:
             return self.device_id
-        devices = await self.request("GET", "/generic/devices")
-        items = devices if isinstance(devices, list) else (devices.get("data") or devices.get("devices") or [] if isinstance(devices, dict) else [])
+        items = await self.devices()
         if items:
-            self.device_id = str(items[0].get("id") or items[0].get("deviceId") or DEFAULT_DEVICE_ID)
+            self.device_id = str(items[0]["id"])
         if not self.device_id:
             raise FluidraCloudClientError("no_device")
         return self.device_id

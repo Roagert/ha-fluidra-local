@@ -25,3 +25,10 @@ def test_local_form_mentions_mdns_autofill():
     text = STRINGS.read_text()
     assert "_fluidra-local._tcp.local" in text
     assert "auto-fills the URL" in text
+
+
+def test_zeroconf_aborts_if_same_local_url_is_already_configured():
+    text = CONFIG_FLOW.read_text()
+    zeroconf_step = text.split("async def async_step_zeroconf", 1)[1].split("async def async_step_user", 1)[0]
+    assert "_abort_if_matching_local_entry_configured(base_url, self._discovered_device_id)" in zeroconf_step
+    assert "def _abort_if_matching_local_entry_configured" in text

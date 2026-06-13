@@ -20,12 +20,18 @@
       },
       "cloud": {
         "title": "Fluidra Cloud",
-        "description": "Cloud mode connects directly to Fluidra cloud using your Fluidra account. Use Local mode for the Proxmox bridge.",
+        "description": "Cloud mode connects directly to Fluidra cloud using your Fluidra account. The device is detected automatically after login. Use Local mode for the Proxmox bridge.",
         "data": {
           "username": "Fluidra username",
           "password": "Fluidra password",
-          "device_id": "Device ID (optional)",
           "scan_interval": "Polling interval (seconds)"
+        }
+      },
+      "cloud_device": {
+        "title": "Choose Fluidra device",
+        "description": "Your Fluidra account has more than one device. Choose which one Home Assistant should configure.",
+        "data": {
+          "device_id": "Device"
         }
       }
     },
