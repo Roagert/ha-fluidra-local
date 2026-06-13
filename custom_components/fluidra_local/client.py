@@ -51,6 +51,9 @@ class FluidraLocalClient:
     async def capabilities(self) -> dict[str, Any]:
         return await self.request("GET", "/capabilities")
 
+    async def components(self) -> list[dict[str, Any]]:
+        return await self.request("GET", "/components")
+
     async def component(self, component_id: int) -> dict[str, Any]:
         return await self.request("GET", f"/component/{component_id}")
 

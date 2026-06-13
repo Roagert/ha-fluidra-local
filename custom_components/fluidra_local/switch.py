@@ -58,10 +58,20 @@ class FluidraLocalPowerSwitch(CoordinatorEntity, SwitchEntity):
             "model": "Swim & Fun Inverter Heat Pump",
         }
 
+    def _set_optimistic_power_state(self, on: bool) -> None:
+        """Reflect accepted power commands immediately while the device/cloud converges."""
+        data = dict(self.coordinator.data or {})
+        current = dict(data.get("power") or {"id": 13})
+        current["desiredValue"] = 1 if on else 0
+        data["power"] = current
+        self.coordinator.async_set_updated_data(data)
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self.client.power(True, wait=False)
+        self._set_optimistic_power_state(True)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self.client.power(False, wait=False)
+        self._set_optimistic_power_state(False)
         await self.coordinator.async_request_refresh()

@@ -36,6 +36,26 @@ def poll_interval_from_options(options: dict[str, Any] | None) -> timedelta:
     return timedelta(seconds=seconds)
 
 
+def map_components_by_id(components: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
+    """Return a component-id keyed map from a bulk bridge component snapshot."""
+    mapped: dict[int, dict[str, Any]] = {}
+    for component in components:
+        try:
+            mapped[int(component["id"])] = component
+        except (KeyError, TypeError, ValueError):
+            continue
+    return mapped
+
+
+def read_components_from_bulk(components: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Return the named HA component payloads from one bridge /components read."""
+    by_id = map_components_by_id(components)
+    return {
+        name: by_id.get(cid, {"id": cid, "error": "missing from bulk component snapshot"})
+        for name, cid in READ_COMPONENTS.items()
+    }
+
+
 class FluidraLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Fetch power/mode/temperature from the local Fluidra server."""
 
@@ -45,10 +65,14 @@ class FluidraLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         data: dict[str, Any] = {"state": await self.client.state(), "capabilities": await self.client.capabilities()}
-        for name, cid in READ_COMPONENTS.items():
-            try:
-                data[name] = await self.client.component(cid)
-            except Exception as exc:  # keep entity available with partial data
-                _LOGGER.debug("Failed to read Fluidra local component %s/%s: %s", name, cid, exc)
-                data[name] = {"id": cid, "error": str(exc)}
+        try:
+            data.update(read_components_from_bulk(await self.client.components()))
+        except Exception as exc:  # keep entity available with partial data if bulk read fails
+            _LOGGER.debug("Failed to read Fluidra local bulk components: %s", exc)
+            for name, cid in READ_COMPONENTS.items():
+                try:
+                    data[name] = await self.client.component(cid)
+                except Exception as component_exc:
+                    _LOGGER.debug("Failed to read Fluidra local component %s/%s: %s", name, cid, component_exc)
+                    data[name] = {"id": cid, "error": str(component_exc)}
         return data
