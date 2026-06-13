@@ -32,7 +32,7 @@ def test_manifest_uses_fluidra_logo_assets_and_cloud_requirement():
     text = MANIFEST.read_text()
     assert '"logo": "logo.png"' in text
     assert '"icon": "icon.svg"' in text
-    assert "boto3" in text
+    assert '"requirements": []' in text
 
 
 def test_cloud_form_does_not_prompt_for_device_id():
@@ -69,3 +69,18 @@ def test_cloud_client_uses_verified_fluidra_cognito_client_id():
     text = (ROOT / "custom_components" / "fluidra_local" / "cloud_client.py").read_text()
     assert 'COGNITO_CLIENT_ID = "g3njunelkcbtefosqm9bdhhq1"' in text
     assert 'COGNITO_CLIENT_ID = "4s2pr20gcl9fac5okd84q0e1h1"' not in text
+
+
+def test_cloud_client_uses_unsigned_cognito_json_api_not_boto3():
+    text = (ROOT / "custom_components" / "fluidra_local" / "cloud_client.py").read_text()
+    assert "COGNITO_ENDPOINT" in text
+    assert "AWSCognitoIdentityProviderService." in text
+    assert '"InitiateAuth"' in text
+    assert "boto3.client" not in text
+
+
+def test_cloud_config_flow_has_mfa_step_for_challenge_accounts():
+    text = CONFIG_FLOW.read_text()
+    assert "FluidraCloudMFARequired" in text
+    assert "async_step_cloud_mfa" in text
+    assert "mfa_code" in text

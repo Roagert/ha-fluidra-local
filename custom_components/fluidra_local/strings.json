@@ -33,6 +33,13 @@
         "data": {
           "device_id": "Device"
         }
+      },
+      "cloud_mfa": {
+        "title": "Fluidra verification code",
+        "description": "Fluidra requires multi-factor authentication. Enter the code from your authenticator app or SMS.",
+        "data": {
+          "mfa_code": "Verification code"
+        }
       }
     },
     "error": {

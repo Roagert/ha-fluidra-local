@@ -10,13 +10,14 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import AbortFlow, FlowResult
 
 from .client import FluidraLocalClient, FluidraLocalClientError
-from .cloud_client import FluidraCloudClient, FluidraCloudClientError
+from .cloud_client import FluidraCloudClient, FluidraCloudClientError, FluidraCloudMFARequired
 from .const import (
     CONF_AUTH_TOKEN,
     CONF_BASE_URL,
     CONF_CONNECTION_MODE,
     CONF_DEVICE_ID,
     CONF_PASSWORD,
+    CONF_REFRESH_TOKEN,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
     CONNECTION_MODES,
@@ -45,6 +46,9 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._cloud_password: str | None = None
         self._cloud_scan_interval = DEFAULT_SCAN_INTERVAL
         self._cloud_devices: list[dict[str, Any]] = []
+        self._cloud_refresh_token: str | None = None
+        self._cloud_mfa_session: str | None = None
+        self._cloud_mfa_challenge: str | None = None
 
     async def async_step_zeroconf(self, discovery_info: Any) -> FlowResult:
         """Handle mDNS discovery from the local Fluidra bridge."""
@@ -129,6 +133,14 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             client = FluidraCloudClient(username, password)
             try:
                 devices = await client.devices()
+            except FluidraCloudMFARequired as exc:
+                self._cloud_username = username
+                self._cloud_password = password
+                self._cloud_scan_interval = int(user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+                self._cloud_scan_interval = max(MIN_SCAN_INTERVAL, min(MAX_SCAN_INTERVAL, self._cloud_scan_interval))
+                self._cloud_mfa_session = exc.session
+                self._cloud_mfa_challenge = exc.challenge_name
+                return await self.async_step_cloud_mfa()
             except FluidraCloudClientError as exc:
                 errors["base"] = "invalid_auth" if "invalid_auth" in str(exc) else "cannot_connect"
             else:
@@ -139,6 +151,7 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._cloud_password = password
                     self._cloud_scan_interval = scan_interval
                     self._cloud_devices = devices
+                    self._cloud_refresh_token = client.refresh_token
                     return await self.async_step_cloud_device()
                 device_id = devices[0]["id"]
                 client.device_id = device_id
@@ -147,6 +160,8 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
                 data = {CONF_CONNECTION_MODE: MODE_CLOUD, CONF_USERNAME: username, CONF_PASSWORD: password}
                 data[CONF_DEVICE_ID] = device_id
+                if client.refresh_token:
+                    data[CONF_REFRESH_TOKEN] = client.refresh_token
                 return self.async_create_entry(title="Fluidra Cloud Heat Pump", data=data, options={CONF_SCAN_INTERVAL: scan_interval})
 
         return self.async_show_form(
@@ -156,6 +171,39 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_PASSWORD): str,
                 vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)),
             }),
+            errors=errors,
+        )
+
+    async def async_step_cloud_mfa(self, user_input: dict | None = None) -> FlowResult:
+        """Handle Fluidra cloud Cognito MFA challenge."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            client = FluidraCloudClient(self._cloud_username or "", self._cloud_password or "")
+            try:
+                await client.respond_to_mfa(
+                    str(user_input["mfa_code"]).strip(),
+                    self._cloud_mfa_session or "",
+                    self._cloud_mfa_challenge or "SOFTWARE_TOKEN_MFA",
+                )
+                devices = await client.devices()
+            except FluidraCloudClientError as exc:
+                errors["base"] = "invalid_auth" if "invalid_auth" in str(exc) else "cannot_connect"
+            else:
+                self._cloud_refresh_token = client.refresh_token
+                if len(devices) > 1:
+                    self._cloud_devices = devices
+                    return await self.async_step_cloud_device()
+                device_id = devices[0]["id"]
+                await self.async_set_unique_id(f"{MODE_CLOUD}:{self._cloud_username}:{device_id}")
+                self._abort_if_unique_id_configured()
+                data = {CONF_CONNECTION_MODE: MODE_CLOUD, CONF_USERNAME: self._cloud_username or "", CONF_PASSWORD: self._cloud_password or "", CONF_DEVICE_ID: device_id}
+                if self._cloud_refresh_token:
+                    data[CONF_REFRESH_TOKEN] = self._cloud_refresh_token
+                return self.async_create_entry(title="Fluidra Cloud Heat Pump", data=data, options={CONF_SCAN_INTERVAL: self._cloud_scan_interval})
+
+        return self.async_show_form(
+            step_id="cloud_mfa",
+            data_schema=vol.Schema({vol.Required("mfa_code"): str}),
             errors=errors,
         )
 
@@ -169,6 +217,8 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
             data = {CONF_CONNECTION_MODE: MODE_CLOUD, CONF_USERNAME: username, CONF_PASSWORD: password}
             data[CONF_DEVICE_ID] = device_id
+            if self._cloud_refresh_token:
+                data[CONF_REFRESH_TOKEN] = self._cloud_refresh_token
             return self.async_create_entry(title="Fluidra Cloud Heat Pump", data=data, options={CONF_SCAN_INTERVAL: self._cloud_scan_interval})
 
         device_options = {

@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 
 from .client import FluidraLocalClient
 from .cloud_client import FluidraCloudClient
-from .const import CONF_AUTH_TOKEN, CONF_BASE_URL, CONF_CONNECTION_MODE, CONF_DEVICE_ID, CONF_PASSWORD, CONF_USERNAME, DOMAIN, MODE_CLOUD, MODE_LOCAL, PLATFORMS
+from .const import CONF_AUTH_TOKEN, CONF_BASE_URL, CONF_CONNECTION_MODE, CONF_DEVICE_ID, CONF_PASSWORD, CONF_REFRESH_TOKEN, CONF_USERNAME, DOMAIN, MODE_CLOUD, MODE_LOCAL, PLATFORMS
 from .coordinator import FluidraLocalCoordinator
 
 
@@ -14,7 +14,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Fluidra integration from a config entry."""
     mode = entry.data.get(CONF_CONNECTION_MODE, MODE_LOCAL)
     if mode == MODE_CLOUD:
-        client = FluidraCloudClient(entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD], device_id=entry.data.get(CONF_DEVICE_ID))
+        client = FluidraCloudClient(entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD], device_id=entry.data.get(CONF_DEVICE_ID), refresh_token=entry.data.get(CONF_REFRESH_TOKEN))
     else:
         auth_token = entry.options.get(CONF_AUTH_TOKEN) or entry.data.get(CONF_AUTH_TOKEN)
         client = FluidraLocalClient(entry.data[CONF_BASE_URL], auth_token=auth_token)
