@@ -13,7 +13,7 @@ from botocore.exceptions import ClientError
 from .const import MODE_TO_VALUE
 
 COGNITO_REGION = "eu-west-1"
-COGNITO_CLIENT_ID = "4s2pr20gcl9fac5okd84q0e1h1"
+COGNITO_CLIENT_ID = "g3njunelkcbtefosqm9bdhhq1"
 API_BASE_URL = "https://api.fluidra-emea.com"
 
 

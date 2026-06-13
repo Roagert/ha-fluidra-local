@@ -63,3 +63,9 @@ def test_cloud_client_never_falls_back_to_default_device_id_for_discovery():
     ensure_device = text.split("async def _ensure_device_id", 1)[1].split("async def state", 1)[0]
     assert "DEFAULT_DEVICE_ID" not in ensure_device
     assert "raise FluidraCloudClientError" in ensure_device
+
+
+def test_cloud_client_uses_verified_fluidra_cognito_client_id():
+    text = (ROOT / "custom_components" / "fluidra_local" / "cloud_client.py").read_text()
+    assert 'COGNITO_CLIENT_ID = "g3njunelkcbtefosqm9bdhhq1"' in text
+    assert 'COGNITO_CLIENT_ID = "4s2pr20gcl9fac5okd84q0e1h1"' not in text

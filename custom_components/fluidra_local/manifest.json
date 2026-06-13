@@ -14,7 +14,7 @@
     "boto3>=1.26.0",
     "botocore>=1.29.0"
   ],
-  "version": "0.4.4",
+  "version": "0.4.5",
   "issue_tracker": "https://github.com/Roagert/ha-fluidra-local/issues",
   "icon": "icon.svg",
   "logo": "logo.png"
