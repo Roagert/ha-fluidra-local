@@ -1,0 +1,36 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Fluidra connection type",
+        "description": "Choose whether Home Assistant should use the local Fluidra bridge or connect directly to Fluidra cloud.",
+        "data": {
+          "connection_mode": "Connection mode"
+        }
+      },
+      "local": {
+        "title": "Fluidra Local Server",
+        "description": "Local mode talks to your local Fluidra server/bridge. The local server must be running and reachable from Home Assistant before setup can continue.",
+        "data": {
+          "base_url": "Local server URL",
+          "auth_token": "Bearer token",
+          "scan_interval": "Polling interval (seconds)"
+        }
+      },
+      "cloud": {
+        "title": "Fluidra Cloud",
+        "description": "Cloud mode connects directly to Fluidra cloud using your Fluidra account. Use Local mode for the Proxmox bridge.",
+        "data": {
+          "username": "Fluidra username",
+          "password": "Fluidra password",
+          "device_id": "Device ID (optional)",
+          "scan_interval": "Polling interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect",
+      "invalid_auth": "Invalid authentication"
+    }
+  }
+}
