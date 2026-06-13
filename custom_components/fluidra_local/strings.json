@@ -10,9 +10,10 @@
       },
       "local": {
         "title": "Fluidra Local Server",
-        "description": "Local mode talks to your local Fluidra server/bridge. The local server must be running and reachable from Home Assistant before setup can continue.",
+        "description": "Local mode talks to your local Fluidra server/bridge. If a bridge broadcasts _fluidra-local._tcp.local, Home Assistant auto-fills the URL. The local server must be running and reachable from Home Assistant before setup can continue.",
         "data": {
           "base_url": "Local server URL",
+          "device_id": "Device ID",
           "auth_token": "Bearer token",
           "scan_interval": "Polling interval (seconds)"
         }

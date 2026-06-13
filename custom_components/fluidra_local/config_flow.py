@@ -4,6 +4,7 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.components.zeroconf import ZeroconfServiceInfo
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
@@ -35,6 +36,23 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    def __init__(self) -> None:
+        self._discovered_base_url: str | None = None
+        self._discovered_device_id: str | None = None
+        self._discovered_auth_required = False
+
+    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> FlowResult:
+        """Handle mDNS discovery from the local Fluidra bridge."""
+        properties = discovery_info.properties or {}
+        base_url = str(properties.get(CONF_BASE_URL) or properties.get("base_url") or f"http://{discovery_info.host}:{discovery_info.port}").rstrip("/")
+        self._discovered_base_url = base_url
+        self._discovered_device_id = str(properties.get(CONF_DEVICE_ID) or properties.get("device_id") or DEFAULT_DEVICE_ID)
+        self._discovered_auth_required = str(properties.get("auth_required", "0")).lower() in {"1", "true", "yes"}
+        await self.async_set_unique_id(f"{MODE_LOCAL}:{base_url}")
+        self._abort_if_unique_id_configured()
+        self.context["title_placeholders"] = {"name": "Fluidra Local Bridge"}
+        return await self.async_step_local()
+
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Choose local bridge or direct cloud mode."""
         if user_input is not None:
@@ -54,6 +72,7 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             base_url = user_input[CONF_BASE_URL].rstrip("/")
+            device_id = user_input.get(CONF_DEVICE_ID, self._discovered_device_id or DEFAULT_DEVICE_ID)
             auth_token = user_input.get(CONF_AUTH_TOKEN, DEFAULT_AUTH_TOKEN).strip()
             await self.async_set_unique_id(f"{MODE_LOCAL}:{base_url}")
             self._abort_if_unique_id_configured()
@@ -67,6 +86,8 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 scan_interval = int(user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
                 scan_interval = max(MIN_SCAN_INTERVAL, min(MAX_SCAN_INTERVAL, scan_interval))
                 data = {CONF_CONNECTION_MODE: MODE_LOCAL, CONF_BASE_URL: base_url}
+                if device_id:
+                    data[CONF_DEVICE_ID] = device_id
                 if auth_token:
                     data[CONF_AUTH_TOKEN] = auth_token
                 return self.async_create_entry(title="Fluidra Local Heat Pump", data=data, options={CONF_SCAN_INTERVAL: scan_interval})
@@ -74,7 +95,8 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="local",
             data_schema=vol.Schema({
-                vol.Required(CONF_BASE_URL, default=DEFAULT_BASE_URL): str,
+                vol.Required(CONF_BASE_URL, default=self._discovered_base_url or DEFAULT_BASE_URL): str,
+                vol.Optional(CONF_DEVICE_ID, default=self._discovered_device_id or DEFAULT_DEVICE_ID): str,
                 vol.Optional(CONF_AUTH_TOKEN, default=DEFAULT_AUTH_TOKEN): str,
                 vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)),
             }),

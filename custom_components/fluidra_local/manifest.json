@@ -7,11 +7,14 @@
   "config_flow": true,
   "documentation": "https://github.com/Roagert/ha-fluidra-local",
   "iot_class": "local_polling",
+  "zeroconf": [
+    "_fluidra-local._tcp.local."
+  ],
   "requirements": [
     "boto3>=1.26.0",
     "botocore>=1.29.0"
   ],
-  "version": "0.4.1",
+  "version": "0.4.2",
   "issue_tracker": "https://github.com/Roagert/ha-fluidra-local/issues",
   "icon": "icon.svg",
   "logo": "logo.png"
