@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import voluptuous as vol
 
+from typing import Any
+
 from homeassistant import config_entries
-from homeassistant.components.zeroconf import ZeroconfServiceInfo
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
@@ -41,7 +42,7 @@ class FluidraLocalConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_device_id: str | None = None
         self._discovered_auth_required = False
 
-    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> FlowResult:
+    async def async_step_zeroconf(self, discovery_info: Any) -> FlowResult:
         """Handle mDNS discovery from the local Fluidra bridge."""
         properties = discovery_info.properties or {}
         base_url = str(properties.get(CONF_BASE_URL) or properties.get("base_url") or f"http://{discovery_info.host}:{discovery_info.port}").rstrip("/")
