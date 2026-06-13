@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, VALUE_TO_MODE, MODE_TO_VALUE
+from .device import fluidra_device_info, integration_mode
 from .state_values import component_value
 
 PRESET_TO_HVAC = {
@@ -37,7 +38,7 @@ def _scaled(component: dict[str, Any] | None, scale: float = 10.0, *, prefer_des
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     data = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([FluidraLocalClimate(data["coordinator"], data["client"])])
+    async_add_entities([FluidraLocalClimate(data["coordinator"], data["client"], integration_mode(entry.data))])
 
 
 class FluidraLocalClimate(CoordinatorEntity, ClimateEntity):
@@ -52,9 +53,10 @@ class FluidraLocalClimate(CoordinatorEntity, ClimateEntity):
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.AUTO, HVACMode.HEAT, HVACMode.COOL]
     _attr_preset_modes = list(MODE_TO_VALUE.keys())
 
-    def __init__(self, coordinator, client) -> None:
+    def __init__(self, coordinator, client, mode: str) -> None:
         super().__init__(coordinator)
         self.client = client
+        self.mode = mode
 
     @property
     def min_temp(self) -> float:
@@ -66,8 +68,7 @@ class FluidraLocalClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def device_info(self) -> dict[str, Any]:
-        device_id = self.coordinator.data.get("state", {}).get("device", {}).get("id") or self.coordinator.data.get("capabilities", {}).get("device_id", "LG24440781")
-        return {"identifiers": {(DOMAIN, device_id)}, "name": "Fluidra Local Heat Pump", "manufacturer": "Fluidra", "model": "Swim & Fun Inverter Heat Pump"}
+        return fluidra_device_info(self.coordinator, self.mode)
 
     @property
     def hvac_mode(self) -> HVACMode:

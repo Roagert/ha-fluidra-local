@@ -10,6 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
+from .device import fluidra_device_info, integration_mode
 
 
 async def async_setup_entry(
@@ -19,7 +20,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up Fluidra Local binary sensors."""
     coord = hass.data[DOMAIN][entry.entry_id]["coordinator"]
-    async_add_entities([FluidraLocalNoFlowErrorSensor(coord)])
+    async_add_entities([FluidraLocalNoFlowErrorSensor(coord, integration_mode(entry.data))])
 
 
 class FluidraLocalNoFlowErrorSensor(CoordinatorEntity, BinarySensorEntity):
@@ -30,6 +31,10 @@ class FluidraLocalNoFlowErrorSensor(CoordinatorEntity, BinarySensorEntity):
     _attr_unique_id = "fluidra_local_LG24440781_no_flow"
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_icon = "mdi:pipe-disconnected"
+
+    def __init__(self, coordinator, mode: str) -> None:
+        super().__init__(coordinator)
+        self.mode = mode
 
     @property
     def is_on(self) -> bool | None:
@@ -51,13 +56,4 @@ class FluidraLocalNoFlowErrorSensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def device_info(self) -> dict[str, Any]:
-        device_id = (
-            self.coordinator.data.get("state", {}).get("device", {}).get("id")
-            or self.coordinator.data.get("capabilities", {}).get("device_id", "LG24440781")
-        )
-        return {
-            "identifiers": {(DOMAIN, device_id)},
-            "name": "Fluidra Local Heat Pump",
-            "manufacturer": "Fluidra",
-            "model": "Swim & Fun Inverter Heat Pump",
-        }
+        return fluidra_device_info(self.coordinator, self.mode)

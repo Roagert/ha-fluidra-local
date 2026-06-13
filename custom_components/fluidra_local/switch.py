@@ -10,6 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
+from .device import fluidra_device_info, integration_mode
 from .state_values import component_value
 
 
@@ -20,7 +21,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up Fluidra Local power switch."""
     data = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([FluidraLocalPowerSwitch(data["coordinator"], data["client"])])
+    async_add_entities([FluidraLocalPowerSwitch(data["coordinator"], data["client"], integration_mode(entry.data))])
 
 
 class FluidraLocalPowerSwitch(CoordinatorEntity, SwitchEntity):
@@ -32,9 +33,10 @@ class FluidraLocalPowerSwitch(CoordinatorEntity, SwitchEntity):
     _attr_device_class = SwitchDeviceClass.SWITCH
     _attr_icon = "mdi:power"
 
-    def __init__(self, coordinator, client) -> None:
+    def __init__(self, coordinator, client, mode: str) -> None:
         super().__init__(coordinator)
         self.client = client
+        self.mode = mode
 
     @property
     def is_on(self) -> bool | None:
@@ -47,16 +49,7 @@ class FluidraLocalPowerSwitch(CoordinatorEntity, SwitchEntity):
 
     @property
     def device_info(self) -> dict[str, Any]:
-        device_id = (
-            self.coordinator.data.get("state", {}).get("device", {}).get("id")
-            or self.coordinator.data.get("capabilities", {}).get("device_id", "LG24440781")
-        )
-        return {
-            "identifiers": {(DOMAIN, device_id)},
-            "name": "Fluidra Local Heat Pump",
-            "manufacturer": "Fluidra",
-            "model": "Swim & Fun Inverter Heat Pump",
-        }
+        return fluidra_device_info(self.coordinator, self.mode)
 
     def _set_optimistic_power_state(self, on: bool) -> None:
         """Reflect accepted power commands immediately while the device/cloud converges."""
