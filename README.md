@@ -1,3 +1,21 @@
+> [!WARNING]
+> **Deprecated — superseded by [Roagert/ha-fluidra-pool](https://github.com/Roagert/ha-fluidra-pool) 2.0.0.**
+> 2.0.0 is still in progress ([ha-fluidra-pool#11](https://github.com/Roagert/ha-fluidra-pool/pull/11));
+> this notice applies once it is released. Fluidra Pool talks to the Fluidra cloud directly
+> (REST + WebSocket push), so no bridge is needed.
+>
+> To migrate:
+>
+> 1. Settings → Devices & services → **Fluidra Local Server** → ⋮ → **Delete** the entry.
+> 2. In HACS, remove **Fluidra Local Server** (⋮ → Remove), delete the
+>    `https://github.com/Roagert/ha-fluidra-local` custom repository, and restart Home Assistant.
+> 3. HACS → ⋮ → **Custom repositories** → add `https://github.com/Roagert/ha-fluidra-pool`,
+>    type **Integration**; download **Fluidra Pool** and restart Home Assistant.
+> 4. Settings → Devices & services → **Add integration** → **Fluidra Pool**, then sign in with
+>    your Fluidra account e-mail and password (two-step verification / MFA codes are supported).
+> 5. Entity ids will differ, because Fluidra Pool is a different integration domain
+>    (`fluidra_pool`, not `fluidra_local`): update your automations and dashboards.
+
 # Fluidra Local Server for Home Assistant
 
 Home Assistant custom integration for a Fluidra / Swim & Fun / Amitime heat pump through a local bridge server.
